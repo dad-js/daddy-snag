@@ -1,0 +1,9 @@
+{
+	"recommendations": [
+		"bradlc.vscode-tailwindcss",
+		"csstools.postcss",
+		"esbenp.prettier-vscode",
+		"svelte.svelte-vscode",
+		"zxh404.vscode-proto3"
+	]
+}

@@ -1,0 +1,39 @@
+{
+	"compilerOptions": {
+		"plugins": [
+			{
+				"transform": "typescript-rtti/dist/transformer",
+			},
+			{
+				"transform": "typescript-transform-paths",
+			},
+			{ "transform": "typescript-transform-paths", "afterDeclarations": true },
+		],
+		"strict": true,
+		/* Visit https://aka.ms/tsconfig to read more about this file */
+		"target": "ES6",
+		"module": "Node16",
+		"rootDir": "./",
+		"outDir": "./dist/",
+		"moduleResolution": "node16",
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"resolvePackageJsonExports": true,
+		"allowJs": true,
+		"resolvePackageJsonImports": true,
+		"paths": {
+			"@context": ["./shared/context"],
+			"@context/*": ["./shared/context/*"],
+			"@services": ["./electron/services"],
+			"@services/*": ["./electron/services/*"],
+			"@workers/*": ["./electron/workers/*"],
+			"@electron/*": ["./electron/*"],
+			"@shared/*": ["./shared/*"],
+			"@assets/*": ["./renderer/assets/*"]
+		}
+	},
+	"exclude": ["renderer/*", "dist/*"]
+}
