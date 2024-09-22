@@ -145,3 +145,6 @@ Feel free to reach out if you encounter any issues or have any suggestions for i
 Contributions are welcome! Feel free to submit a pull request or open an issue if you find a bug or have an idea for a new feature.
 
 Enjoy using the Dark and Darker Marketplace Auto-Buy Tool! 🎮
+
+# Join Discord
+Feel free to join my Discord @ https://discord.gg/2CpRqD9F6Y
