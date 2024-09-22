@@ -7,7 +7,7 @@
 		<h2 class="h2 font-serif">Daddy Snag</h2>
 		<figure>
 			<section class="img-bg" />
-			<img class="w-full opacity-75" src="/assets/logo.svg" alt="Logo" />
+			<img class="w-full opacity-75" src="assets/logo.svg" alt="Logo" />
 		</figure>
 	</div>
 	<div class="relative grow p-8">

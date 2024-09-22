@@ -1,6 +1,6 @@
 <figure>
 	<section class="img-bg" />
-	<img class="fill-token -scale-x-[100%]" src="/assets/logo.svg" alt="Logo" />
+	<img class="fill-token -scale-x-[100%]" src="assets/logo.svg" alt="Logo" />
 </figure>
 
 <style lang="postcss">

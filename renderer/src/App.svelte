@@ -19,6 +19,7 @@
 
 	import Router, { location, push } from "svelte-spa-router";
 	import {
+		ArrowsUpDown,
 		Icon,
 		UserCircle,
 		Cog8Tooth,
@@ -49,6 +50,7 @@
 	const routes = {
 		"/": WelcomePage,
 		"/marketplace": Marketplace,
+		"/packet": PacketInspector,
 		"/autobuy": AutoBuy,
 		"/stash": StashPage,
 		"/listed-items": ListedItems,
@@ -60,11 +62,13 @@
 		{ url: "/stash", icon: DevicePhoneMobile, title: "Stash" },
 		{ url: "/listed-items", icon: ListBullet, title: "My Listings" },
 		{ url: "/purchase-history", icon: Wallet, title: "Purchase History" },
+		{ url: "/packet", icon: ArrowsUpDown, title: "PacketInspector" },
 	];
 
 	import { getToastStore } from "@skeletonlabs/skeleton";
 	const toastStore = getToastStore();
 	import cashAudio from "@assets/cash.mp3";
+	import PacketInspector from "@pages/PacketInspector.svelte";
 
 	let isAutoBuy: boolean = false;
 	onMount(() => {
@@ -120,7 +124,7 @@
 					on:click={() => push("/")}
 				>
 					<div class="w-full flex items-center justify-center">
-						<img class="h-12" src="/assets/logo.svg" alt="Logo" />
+						<img class="h-12" src="assets/logo.svg" alt="Logo" />
 					</div>
 				</AppRailTile>
 				{#each railTiles as tile}

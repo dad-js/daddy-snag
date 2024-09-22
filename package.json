@@ -1,6 +1,6 @@
 {
 	"name": "@dad-js/daddy-snag",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Dark and Darker Marketplace Item Snapper",
 	"main": "dist/electron/index.js",
 	"scripts": {
@@ -67,6 +67,7 @@
 		"@dad-js/dad-items": "^0.0.1",
 		"@dad-js/dad.js": "^0.0.2",
 		"electron-reload": "2.0.0-alpha.1",
+		"electron-squirrel-startup": "^1.0.1",
 		"module-alias": "^2.2.3",
 		"moment": "^2.30.1",
 		"protobufjs": "^7.4.0",
@@ -77,6 +78,7 @@
 		"ts-proto": "^2.2.0",
 		"tsc-alias": "^1.8.10",
 		"typescript-rtti": "^0.9.6",
-		"typescript-transform-paths": "^3.5.1"
+		"typescript-transform-paths": "^3.5.1",
+		"update-electron-app": "^3.0.0"
 	}
 }
