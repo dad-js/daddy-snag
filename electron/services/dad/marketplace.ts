@@ -265,7 +265,6 @@ export class MarketplaceService {
 		);
 
 		const requiredGoldCoins = await this.#getRequiredGoldCoins(item.price);
-		logger.info(requiredGoldCoins ? "We got the money!" : "We dont got the money!");
 		if (requiredGoldCoins) {
 			this.dad.client.marketplace.buyItem(item.listingId, requiredGoldCoins);
 

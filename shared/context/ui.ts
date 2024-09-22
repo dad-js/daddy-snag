@@ -3,6 +3,8 @@ import { action, IPCContext, value } from "@shared/libs/ipc";
 
 export const UIStatus = {
 	loading: () => "Loading...",
+	checkingForUpdates: () => "Checking for updates...",
+	downloadUpdate: () => "Downloading update...",
 	lookingForSteam: () => `Looking for Steam...`,
 	lookingForDarkAndDarker: () => `Looking for Dark and Darker...`,
 	gameAlreadyRunning: () => `Game is already running!`,

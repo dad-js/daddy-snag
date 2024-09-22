@@ -5,10 +5,13 @@ import { spawn, exec } from "child_process";
 import { utilityProcess } from "electron";
 import { getGamePath } from "steam-game-path";
 import { join } from "path";
-import type { DaDClientService } from "./dad";
+import { app } from "electron";
+import { UpdateService } from "./update";
 
 @Service
 export class GameService {
+	@Inject updateService!: UpdateService;
+
 	readonly tavern = "Tavern.exe";
 	readonly dungeonCrawler = "DungeonCrawler.exe";
 	readonly appId = 2016590;
@@ -22,6 +25,8 @@ export class GameService {
 
 	async onStart() {
 		logger.info(`Starting game service`);
+		await this.updateService.checkForUpdates();
+		await sleep(5000);
 
 		this.status = "lookingForDarkAndDarker";
 		this.statusText = UIStatus.lookingForDarkAndDarker();

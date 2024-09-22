@@ -1,6 +1,6 @@
 {
 	"name": "@dad-js/daddy-snag",
-	"version": "0.0.2",
+	"version": "0.0.4",
 	"description": "Dark and Darker Marketplace Item Snapper",
 	"main": "dist/electron/index.js",
 	"scripts": {
@@ -51,6 +51,7 @@
 	},
 	"homepage": "https://github.com/dad-js/daddy-snag#readme",
 	"devDependencies": {
+		"@types/semver": "^7.5.8",
 		"concurrently": "^8.2.2",
 		"electron": "^32.1.2",
 		"electron-builder": "^25.0.5",
@@ -66,12 +67,14 @@
 		"@dad-js/dad-api": "^0.0.3",
 		"@dad-js/dad-items": "^0.0.1",
 		"@dad-js/dad.js": "^0.0.2",
+		"axios": "^1.7.7",
 		"electron-reload": "2.0.0-alpha.1",
 		"electron-squirrel-startup": "^1.0.1",
 		"module-alias": "^2.2.3",
 		"moment": "^2.30.1",
 		"protobufjs": "^7.4.0",
 		"reflect-metadata": "^0.1.14",
+		"semver": "^7.6.3",
 		"sqlite-electron": "^3.1.1",
 		"steam-game-path": "^2.3.0",
 		"steamworks.js": "^0.4.0",
