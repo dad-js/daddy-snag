@@ -45,10 +45,6 @@ export class UpdateService {
 
 	async onStart() {
 		logger.info(`Starting update service `);
-		if (app.commandLine.hasSwitch("newupdate")) {
-			const savePath = app.getPath("exe");
-			renameSync(savePath, savePath.replace(".new", ""));
-		}
 	}
 
 	async checkForUpdates() {
@@ -76,33 +72,13 @@ export class UpdateService {
 	async downloadUpdate(latest: GithubRelease) {
 		logger.info(`Downloading Update`);
 		const downloadUrl = latest.assets[0].browser_download_url;
-		const savePath = app.getPath("exe") + ".new";
+		const savePath = `${process.env.PORTABLE_EXECUTABLE_DIR}\\${latest.assets[0].name}`;
 
 		await this.downloadFile(downloadUrl, savePath);
 
-		const spawnedProcess = spawn(
-			"CMD",
-			[
-				"/S",
-				"/C",
-				"TIMEOUT",
-				"5",
-				"&",
-				"START",
-				"CMD.exe",
-				"/S",
-				"/C",
-				"START",
-				savePath,
-				"--newupdate",
-			],
-			{
-				detached: true,
-				stdio: "ignore",
-				windowsHide: true,
-				shell: false,
-			},
-		);
+		const spawnedProcess = spawn(savePath, {
+			detached: true,
+		});
 		spawnedProcess.unref();
 		app.quit();
 	}
