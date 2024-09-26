@@ -1,6 +1,6 @@
 {
 	"name": "@dad-js/daddy-snag",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "Dark and Darker Marketplace Item Snapper",
 	"main": "dist/electron/index.js",
 	"scripts": {
@@ -13,6 +13,7 @@
 		"dev:renderer": "cd renderer && pnpm run dev",
 		"dev:electron": "pnpm run build:electron && electron .",
 		"dev:electron2": "electron .",
+		"update:dad-js": "pnpm update @dad-js/dad-api@latest && pnpm update @dad-js/dad-items@latest && pnpm update @dad-js/dad.js@latest && cd renderer && pnpm run update:dad-js",
 		"format": "prettier --write ."
 	},
 	"_moduleAliases": {
@@ -64,9 +65,9 @@
 		"typescript": "5.1.6"
 	},
 	"dependencies": {
-		"@dad-js/dad-api": "^0.0.3",
-		"@dad-js/dad-items": "^0.0.1",
-		"@dad-js/dad.js": "^0.0.2",
+		"@dad-js/dad-api": "^0.0.4",
+		"@dad-js/dad-items": "^0.0.2",
+		"@dad-js/dad.js": "^0.0.4",
 		"axios": "^1.7.7",
 		"electron-reload": "2.0.0-alpha.1",
 		"electron-squirrel-startup": "^1.0.1",

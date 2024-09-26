@@ -50,6 +50,10 @@ export class UpdateService {
 	async checkForUpdates() {
 		logger.info(`Current Version: ${this.#currentVersion}`);
 
+		if (!app.isPackaged) {
+			logger.info(`Running in development - Skipping Update!`);
+			return;
+		}
 		this.status = "checkingForUpdates";
 		this.statusText = UIStatus.checkingForUpdates();
 
@@ -61,10 +65,14 @@ export class UpdateService {
 				latest?.tag_name ?? this.#currentVersion,
 				this.#currentVersion,
 			);
+			logger.info(`Latest Version: ${latest.tag_name}`);
 			if (hasNewVersion) {
 				this.status = "downloadUpdate";
 				this.statusText = UIStatus.downloadUpdate();
+
 				await this.downloadUpdate(latest);
+			} else {
+				logger.info(`No update available!`);
 			}
 		}
 	}

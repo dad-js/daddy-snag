@@ -57,6 +57,8 @@
 			<tr>
 				<ThSort {handler} orderBy="itemName">Item Name</ThSort>
 				<td class="text-right font-bold px-2">Max Price</td>
+				<td class="text-right font-bold px-2">Rarity</td>
+				<td class="text-right font-bold px-2">Loot State</td>
 				<td class="text-center font-bold px-2">Action</td>
 			</tr>
 		</thead>
@@ -65,6 +67,12 @@
 				<tr>
 					<td>{getFilterValue(filterEntry, "displayName")}</td>
 					<td class="text-right">{getFilterValue(filterEntry, "maxPrice")}</td>
+					<td class="text-right"
+						>{getFilterValue(filterEntry, MARKETPLACE_FILTER.RARITY)
+							.split(".")
+							.pop()}</td
+					>
+					<td class="text-right">{getFilterValue(filterEntry, "lootState")}</td>
 					<td class="text-center">
 						<button class="cursor-pointer" on:click={() => removeFilter(filterEntry)}>
 							<Icon src={Trash} outline class="h-5 text-red-500 "></Icon>

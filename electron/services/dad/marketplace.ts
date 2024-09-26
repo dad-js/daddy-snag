@@ -2,22 +2,27 @@ import { app } from "electron";
 import { createWriteStream, readFileSync, writeFile, type WriteStream } from "original-fs";
 
 import { Inject, Service } from "@electron/libs/di";
-import { logger, stripTag } from "@electron/libs/utils";
+import { logger } from "@electron/libs/utils";
 import { DaDClientService, AppService } from "@services";
 import { ui, marketplace, type ToastOption, type SellerInfo } from "@context";
-import type { MarketplaceMyItemListRes, Unmessage } from "@dad-js/dad-api/";
+import type { Unmessage } from "@dad-js/dad-api/";
 import type { Item } from "@dad-js/dad.js";
 
 import {
+	Define_Item_LootState,
 	MARKETPLACE_FILTER,
 	PacketResult,
-	type SItem,
 	type SMARKETPLACE_FILTER_INFO,
 	type SMARKETPLACE_TRADE_ITEM_INFO,
 	type SMARKETPLACE_TRADE_SLOT_INFO,
 } from "@dad-js/dad-api/pb";
-import { Store, Readable, type MarketplaceResponse, mapItem } from "@dad-js/dad.js";
+import { Store, type MarketplaceResponse, mapItem } from "@dad-js/dad.js";
 import moment from "moment";
+
+const AUTO_BUY_INTERVAL_MS = 500;
+const MAX_GOLD_COIN_POUCH_CONTENTS = 10;
+const MAX_GOLD_COIN_BAG_CONTENTS = 1000;
+const MAX_GOLD_COIN_CHEST_CONTENTS = 10000;
 
 @Service
 export class MarketplaceService {
@@ -48,7 +53,6 @@ export class MarketplaceService {
 
 	#listedItems: BigInt[] = [];
 	#seenListings: string[] = [];
-	#seenNames: string[] = [];
 
 	#autoBuyInterval: any | null = null;
 
@@ -64,24 +68,26 @@ export class MarketplaceService {
 		this.toggleLogNames(true);
 	}
 
-	#addListeners() {
-		this.app.mainWindow.once("close", (e) => {
-			this.#saveLoggedNames();
-			this.#logNamesFS?.end();
-			this.#logNamesFS?.close();
-		});
+	async onClose() {
+		logger.info("Stopping DaD Marketplace service  ");
 
-		process.on("SIGTERM", () => {
-			this.#saveLoggedNames();
-			this.#logNamesFS?.end();
-			this.#logNamesFS?.close();
-		});
+		this.#saveLoggedNames();
+		this.#logNamesFS?.end();
+		this.#logNamesFS?.close();
+	}
+
+	#removeListener() {
+		process.off("SIGTERM", this.onClose);
+		this.app.mainWindow.off("close", this.onClose);
+	}
+
+	#addListeners() {
+		this.app.mainWindow.once("close", this.onClose);
+		process.on("SIGTERM", this.onClose);
 
 		this.dad.client.marketplace.marketplaceItems.subscribe((v) => {
 			if (v !== undefined && Object.keys(v).length !== 0) {
 				if (this.logToFile) {
-					const itemList = [];
-
 					for (let item of v.items) {
 						if (!this.#listedItems.includes(item.listingId)) {
 							this.#listedItems.push(item.listingId);
@@ -188,10 +194,7 @@ export class MarketplaceService {
 		filters: [SMARKETPLACE_FILTER_INFO, Record<string, any>],
 	) {
 		for (const filterInfo of filters) {
-			//logger.info(filterInfo);
 			if (filterInfo.filterType && filterInfo.filterType === MARKETPLACE_FILTER.NAME) {
-				//logger.info(filterInfo.filters);
-				//logger.info(item.item.data.itemTag);
 				if (filterInfo.filters.includes(item.item.data.itemTag)) return true;
 			}
 		}
@@ -204,7 +207,8 @@ export class MarketplaceService {
 		filters: [SMARKETPLACE_FILTER_INFO, Record<string, any>],
 	) {
 		if (!this.#shouldConsiderItem(item, filters)) return false;
-		//logger.info(`Considering item: ${item.item.data.itemTag}`);
+		logger.info(`Considering ${item.item.id}`);
+		logger.info(item.item);
 
 		// Check the standard filters
 		for (const filter of filters) {
@@ -212,32 +216,7 @@ export class MarketplaceService {
 				switch (filter.filterType) {
 					case MARKETPLACE_FILTER.RARITY:
 						if (!filter.filters.includes(item.item.data.raritytype)) {
-							return false;
-						}
-						break;
-					case MARKETPLACE_FILTER.SLOT:
-						if (!filter.filters.includes(item.item.slot.toString())) {
-							return false;
-						}
-						break;
-					case MARKETPLACE_FILTER.TYPE:
-						if (!filter.filters.includes(item.item.data.itemType)) {
-							return false;
-						}
-						break;
-					case MARKETPLACE_FILTER.STATIC_ATTRIBUTE:
-						const primaryPropsMatch = item.item.primaryProperties.some((prop) =>
-							filter.filters.includes(prop.type),
-						);
-						if (!primaryPropsMatch) {
-							return false;
-						}
-						break;
-					case MARKETPLACE_FILTER.RANDOM_ATTRIBUTE:
-						const secondaryPropsMatch = item.item.secondaryProperties.some((prop) =>
-							filter.filters.includes(prop.type),
-						);
-						if (!secondaryPropsMatch) {
+							logger.info(`Doesnt match Rarity`);
 							return false;
 						}
 						break;
@@ -248,15 +227,74 @@ export class MarketplaceService {
 
 			// Check the custom filters
 			if ("minCount" in filter && item.item.count < filter["minCount"]) {
+				logger.info(`Doesnt match MinCount`);
 				return false;
 			}
 
 			if ("maxPrice" in filter && item.price > filter["maxPrice"]) {
+				logger.info(`Doesnt match maxPrice`);
 				return false;
+			}
+
+			if (
+				"lootState" in filter &&
+				Define_Item_LootState[item.item.lootState] !== filter["lootState"]
+			) {
+				logger.info(`Doesnt match lootState`);
+				return false;
+			}
+
+			if ("primaryProperties" in filter && item.item.primaryProperties.length > 0) {
+				const filterProperties: { property: string; value: number; name: string }[] =
+					filter["primaryProperties"];
+
+				for (let filterProp of filterProperties) {
+					if (!this.#compareProperties(filterProp, item.item.primaryProperties)) {
+						logger.info(`Doesnt match Primary`);
+						return false;
+					}
+				}
+			}
+
+			if ("secondaryProperties" in filter && item.item.secondaryProperties.length > 0) {
+				const filterProperties: { property: string; value: number; name: string }[] =
+					filter["secondaryProperties"];
+
+				for (let filterProp of filterProperties) {
+					if (!this.#compareProperties(filterProp, item.item.secondaryProperties)) {
+						logger.info(`Doesnt match Secondary`);
+						return false;
+					}
+				}
 			}
 		}
 
 		return true;
+	}
+
+	#compareProperties(
+		filterProp: {
+			property: string;
+			value: number;
+			name: string;
+		},
+		propsToCheck: {
+			type: string;
+			value: number;
+		}[],
+	): boolean {
+		let hasProp = false;
+		for (let prop of propsToCheck) {
+			if (
+				prop.type == "DesignDataItemPropertyType:" + filterProp.name &&
+				prop.value >= filterProp.value
+			) {
+				hasProp = true;
+				break;
+			}
+		}
+
+		return hasProp;
 	}
 
 	async #buyItem(item: MarketplaceResponse["items"][0]) {
@@ -289,7 +327,8 @@ export class MarketplaceService {
 			inventory.items
 				.filter(
 					(xItem) =>
-						(xItem.id === "DesignDataItem:Id_Item_GoldCoinPurse" ||
+						(xItem.id === "DesignDataItem:Id_Item_GoldCoins" ||
+							xItem.id === "DesignDataItem:Id_Item_GoldCoinPurse" ||
 							xItem.id === "DesignDataItem:Id_Item_GoldCoinBag" ||
 							xItem.id === "DesignDataItem:Id_Item_GoldCoinChest") &&
 						xItem.contents > 1,
@@ -355,17 +394,20 @@ export class MarketplaceService {
 		if (this.logNames === toggle) return;
 		this.logNames = toggle;
 
-		const path = app.getPath("userData");
+		try {
+			const path = app.getPath("userData");
 
-		if (this.logNames) {
-			logger.info(`Saving logged names to ${path}/loggedNames.json`);
+			if (this.logNames) {
+				logger.info(`Saving logged names to ${path}/loggedNames.json`);
+				this.#logNamesFS = createWriteStream(`${path}/loggedNames.json`, { flags: "w+" });
+			} else {
+				logger.info(`Stopped logging - ${path}/loggedNames.json`);
 
-			this.#logNamesFS = createWriteStream(`${path}/loggedNames.json`, { flags: "w+" });
-		} else {
-			logger.info(`Stopped logging - ${path}/loggedNames.json`);
-
-			this.#saveLoggedNames();
-			this.#logNamesFS?.end();
+				this.#saveLoggedNames();
+				this.#logNamesFS?.end();
+			}
+		} catch (err) {
+			logger.info(`Error loading logged names: ${err}`);
 		}
 	}
 
@@ -412,7 +454,7 @@ export class MarketplaceService {
 	#startAutoBuy() {
 		this.#autoBuyInterval = setInterval(() => {
 			this.refreshMarketplace();
-		}, 500);
+		}, AUTO_BUY_INTERVAL_MS);
 	}
 
 	#stopAutoBuy() {
@@ -449,14 +491,18 @@ export class MarketplaceService {
 	}
 
 	#saveMarketplaceFilters() {
-		const path = app.getPath("userData");
-		const filters = JSON.stringify(this.marketplaceFilters.value, null, 2);
+		try {
+			const path = app.getPath("userData");
+			const filters = JSON.stringify(this.marketplaceFilters.value, null, 2);
 
-		writeFile(`${path}/marketplaceFilters.json`, filters, (err) => {
-			if (err) {
-				logger.info(`Failed to save marketplace filters: ${err}`);
-			}
-		});
+			writeFile(`${path}/marketplaceFilters.json`, filters, (err) => {
+				if (err) {
+					logger.info(`Failed to save marketplace filters: ${err}`);
+				}
+			});
+		} catch (err) {
+			logger.info(`Error saving marketplace filters: ${JSON.stringify(err)}`);
+		}
 	}
 
 	#loadMarketplaceFilters() {
@@ -476,18 +522,22 @@ export class MarketplaceService {
 	}
 
 	#savePurchaseHistory() {
-		const path = app.getPath("userData");
-		const data = JSON.stringify(
-			this.boughtItems.value,
-			(_, v) => (typeof v === "bigint" ? v.toString() : v),
-			2,
-		);
+		try {
+			const path = app.getPath("userData");
+			const data = JSON.stringify(
+				this.boughtItems.value,
+				(_, v) => (typeof v === "bigint" ? v.toString() : v),
+				2,
+			);
 
-		writeFile(`${path}/purchaseHistory.json`, data, (err) => {
-			if (err) {
-				logger.info(`Failed to save purchase history: ${err}`);
-			}
-		});
+			writeFile(`${path}/purchaseHistory.json`, data, (err) => {
+				if (err) {
+					logger.info(`Failed to save purchase history: ${err}`);
+				}
+			});
+		} catch (err) {
+			logger.info(`Failed to save purchase history: ${err}`);
+		}
 	}
 
 	#loadPurchaseHistory() {
@@ -609,21 +659,24 @@ export class MarketplaceService {
 			inventory.items
 				.filter(
 					(item) =>
-						item.id === "DesignDataItem:Id_Item_GoldCoinPurse" && item.contents < 10,
+						item.id === "DesignDataItem:Id_Item_GoldCoinPurse" &&
+						item.contents < MAX_GOLD_COIN_POUCH_CONTENTS,
 				)
 				.forEach((item) => availableGoldContainers.push(item));
 
 			inventory.items
 				.filter(
 					(item) =>
-						item.id === "DesignDataItem:Id_Item_GoldCoinBag" && item.contents < 1000,
+						item.id === "DesignDataItem:Id_Item_GoldCoinBag" &&
+						item.contents < MAX_GOLD_COIN_BAG_CONTENTS,
 				)
 				.forEach((item) => availableGoldContainers.push(item));
 
 			inventory.items
 				.filter(
 					(item) =>
-						item.id === "DesignDataItem:Id_Item_GoldCoinChest" && item.contents < 10000,
+						item.id === "DesignDataItem:Id_Item_GoldCoinChest" &&
+						item.contents < MAX_GOLD_COIN_CHEST_CONTENTS,
 				)
 				.forEach((item) => availableGoldContainers.push(item));
 		}
@@ -743,5 +796,21 @@ export class MarketplaceService {
 
 		if (requiredPrice == 0) return possibleContainers;
 		return false;
+	}
+
+	#saveDataToFile(data: any, fileName: string, successMessage: string) {
+		const path = app.getPath("userData");
+
+		writeFile(
+			`${path}/${fileName}`,
+			JSON.stringify(data, (_, v) => (typeof v === "bigint" ? v.toString() : v), 2),
+			(err) => {
+				if (err) {
+					logger.info(`Failed to save ${fileName}: ${err.message}`);
+				} else {
+					this.toastMessage = { message: successMessage, background: "bg-surface-500" };
+				}
+			},
+		);
 	}
 }

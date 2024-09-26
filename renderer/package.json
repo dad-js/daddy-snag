@@ -8,6 +8,7 @@
 		"format": "prettier --write .",
 		"build": "vite build --emptyOutDir",
 		"preview": "vite preview",
+		"update:dad-js": "pnpm update @dad-js/dad-items@latest && pnpm update @dad-js/dad.js@latest",
 		"check": "svelte-check --tsconfig ./tsconfig.json"
 	},
 	"devDependencies": {
@@ -29,8 +30,8 @@
 	},
 	"dependencies": {
 		"@atlaskit/pragmatic-drag-and-drop": "^1.3.1",
-		"@dad-js/dad-items": "^0.0.1",
-		"@dad-js/dad.js": "^0.0.2",
+		"@dad-js/dad-items": "^0.0.2",
+		"@dad-js/dad.js": "^0.0.4",
 		"@floating-ui/dom": "^1.6.11",
 		"@vincjo/datatables": "^1.14.10",
 		"moment": "^2.30.1",

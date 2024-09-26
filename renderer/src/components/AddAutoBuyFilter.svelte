@@ -19,6 +19,7 @@
 		MARKETPLACE_FILTER,
 	} from "@dad-js/dad-api/pb";
 	import type { IItemDBEntry } from "node_modules/@dad-js/dad-items/dist/types";
+	import { ItemPropertyTypes } from "@shared/libs/types";
 
 	let itemDB = ipc.value(dadclient, "itemDB");
 	let listOfItems: IItemDBEntry[] = [];
@@ -46,6 +47,9 @@
 	let filterItemNameLabel: string = "";
 	let selectedItem: IItemDBEntry;
 
+	const toPascalCase = (s: string | null | undefined) =>
+		s ? s.replace(/(\w)(\w*)/g, (_, p, q) => p.toUpperCase() + q.toLowerCase()) : s;
+
 	$: {
 		filterItemNameOptions = listOfItems
 			?.filter((item) => {
@@ -70,7 +74,7 @@
 						...filterRarityOptions,
 						{
 							label: rarity,
-							value: rarity,
+							value: "Type.Item.Rarity." + toPascalCase(rarity),
 							keywords: "",
 						},
 					];
@@ -93,6 +97,20 @@
 					];
 				}
 			});
+
+		filterPrimaryProperties = [];
+		filterPrimaryProperties = ItemPropertyTypes.map((prop) => ({
+			label: prop.split("_").pop() ?? "",
+			value: prop,
+			meta: 0,
+		}));
+
+		filterSecondaryProperties = [];
+		filterSecondaryProperties = ItemPropertyTypes.map((prop) => ({
+			label: prop.split("_").pop() ?? "",
+			value: prop,
+			meta: 0,
+		}));
 	}
 	const onItemNameSelected = (event: CustomEvent<AutocompleteOption<string>>): void => {
 		filterItemNameLabel = event.detail.label;
@@ -127,7 +145,7 @@
 	let selectedMaxPriceValue: number;
 
 	// -> Primary Properties
-	let primaryPropertiesList: { property: string; value: number }[] = [];
+	let primaryPropertiesList: { property: string; value: number; name: string }[] = [];
 
 	const popupFilterPrimaryProperties = {
 		...defaultPopupSettings,
@@ -138,12 +156,12 @@
 	const onPrimaryPropertySelection = (event: CustomEvent<AutocompleteOption<string>>): void => {
 		primaryPropertiesList = [
 			...primaryPropertiesList,
-			{ property: event.detail.label, value: 0 },
+			{ property: event.detail.label, value: 0, name: event.detail.value },
 		];
 	};
 
 	// -> Secondary Properties
-	let secondaryPropertiesList: { property: string; value: number }[] = [];
+	let secondaryPropertiesList: { property: string; value: number; name: string }[] = [];
 
 	const popupFilterSecondaryProperties = {
 		...defaultPopupSettings,
@@ -154,12 +172,12 @@
 	const onSecondaryPropertySelection = (event: CustomEvent<AutocompleteOption<string>>): void => {
 		secondaryPropertiesList = [
 			...secondaryPropertiesList,
-			{ property: event.detail.value, value: 0 },
+			{ property: event.detail.label, value: 0, name: event.detail.value },
 		];
 	};
 
 	// -> Apply
-	const onApplyNewFilter = () => {
+	const buildFilters = () => {
 		const marketplaceFilters: MarketplaceFilter = new MarketplaceFilter();
 
 		// -> Item Name
@@ -173,17 +191,42 @@
 			marketplaceFilters.addFilter(MARKETPLACE_FILTER.RARITY, [selectedRarityValue]);
 		}
 
-		// -> Max Price
+		// -> Max Pricen
 		if (selectedMaxPriceValue > 0) {
 			marketplaceFilters.addCustomFilter("maxPrice", selectedMaxPriceValue.toString());
 		}
 
-		console.log(marketplaceFilters);
+		// -> Loot State
+		if (selectedLootStateValue !== "") {
+			marketplaceFilters.addCustomFilter("lootState", selectedLootStateValue);
+		}
+
+		if (primaryPropertiesList.length > 0) {
+			marketplaceFilters.addCustomFilter("primaryProperties", primaryPropertiesList);
+		}
+
+		if (secondaryPropertiesList.length > 0) {
+			marketplaceFilters.addCustomFilter("secondaryProperties", secondaryPropertiesList);
+		}
+
+		return marketplaceFilters;
+	};
+	const onApplyNewFilter = () => {
+		const filters = buildFilters();
+
 		ipc.call(marketplace, "addMarketplaceFilter", [
-			...marketplaceFilters.getFilters(),
-			marketplaceFilters.getCustomFilters(),
+			...filters.getFilters(),
+			filters.getCustomFilters(),
 		]);
 	};
+
+	const onDumpFilter = () => {
+		const filters = buildFilters();
+		console.log(filters);
+		console.log(selectedItem);
+	};
+
+	const handlePrimaryPropertyChange = (prop: any) => {};
 </script>
 
 <div class="relative h-96 min-h-96 p-2">
@@ -286,15 +329,27 @@
 				</div>
 			</div>
 
-			<!-- Apply -->
-			<div class="relative space-y-3 grow flex items-end mr-6">
-				<button
-					on:click={onApplyNewFilter}
-					type="button"
-					class="w-full btn btn-sm variant-outline-primary"
-				>
-					<span class="text-md">Apply</span>
-				</button>
+			<div class="flex flex-col gap-2 mt-auto">
+				<!-- Apply -->
+				<div class="relative space-y-3 grow flex items-end mr-6">
+					<button
+						on:click={onApplyNewFilter}
+						type="button"
+						class="w-full btn btn-sm variant-outline-primary"
+					>
+						<span class="text-md">Apply</span>
+					</button>
+				</div>
+				<!-- Dump -->
+				<div class="relative space-y-3 grow flex items-end mr-6">
+					<button
+						on:click={onDumpFilter}
+						type="button"
+						class="w-full btn btn-sm variant-outline-secondary"
+					>
+						<span class="text-md">Dump Filter</span>
+					</button>
+				</div>
 			</div>
 		</div>
 
@@ -333,7 +388,8 @@
 							<input
 								type="number"
 								class="input max-w-20 pl-3 text-center"
-								value={property.value}
+								on:change={() => handlePrimaryPropertyChange(property)}
+								bind:value={property.value}
 							/>
 						</div>
 					{/each}
